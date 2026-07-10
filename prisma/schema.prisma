@@ -1,0 +1,37 @@
+// 数据源：连接本地MySQL
+datasource db {
+  provider = "mysql"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "./generated/prisma"
+}
+
+// 用户角色枚举，仅允许USER/ADMIN两种值
+enum Role {
+  USER    // 普通用户
+  ADMIN   // 管理员
+}
+
+// 用户表
+model User {
+  id        Int       @id @default(autoincrement()) // 主键自增ID
+  name      String                                  // 用户名，非空
+  email     String    @unique                       // 邮箱唯一，不可重复注册
+  password  String                                  // 加密密码
+  role      Role      @default(USER)                // 角色默认普通用户
+  posts     Post[]                                  // 一对多：关联多篇文章
+  createdAt DateTime  @default(now())               // 创建时间，默认当前时间
+}
+
+// 文章表
+model Post {
+  id        Int       @id @default(autoincrement())
+  title     String                                  // 文章标题
+  content   String?                                 // 文章内容，?代表允许为空
+  userId    Int                                     // 外键，绑定用户ID
+  // 关联用户表，删除用户时同步删除其所有文章
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+}
