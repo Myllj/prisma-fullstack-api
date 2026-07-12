@@ -1,11 +1,8 @@
 import { Router } from 'express'
-import { auth } from '../middleware/auth.js'
+import { auth } from '../modules/auth/auth.middleware.js'
 import * as userCtrl from '../controller/user.controller.js'
 
 const router = Router()
-
-// 登录（无需鉴权）
-router.post('/login', userCtrl.login)
 
 // 个人信息（需鉴权，必须放在 /:id 之前）
 router.get('/profile', auth, userCtrl.profile)

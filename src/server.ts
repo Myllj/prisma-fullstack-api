@@ -4,6 +4,7 @@ import cors from 'cors'
 import { notFound, globalError } from './middleware/error.js'
 import userRoute from './route/user.route.js'
 import postRoute from './route/post.route.js'
+import authRoute from './modules/auth/auth.route.js'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 3000
@@ -13,6 +14,7 @@ app.use(cors())
 app.use(express.json())
 
 // 路由挂载
+app.use('/api/auth', authRoute)
 app.use('/api/user', userRoute)
 app.use('/api/post', postRoute)
 

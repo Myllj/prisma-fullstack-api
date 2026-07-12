@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'prisma-fullstack-api-secret-key'
+import { JWT_SECRET } from './auth.service.js'
 
 // 扩展 Express Request 类型，挂载用户信息
 declare global {

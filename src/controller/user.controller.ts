@@ -1,37 +1,8 @@
 import { Request, Response } from 'express'
-import jwt from 'jsonwebtoken'
 import prisma from '../prisma.js'
 import { success, error } from '../utils/response.js'
 import { validate } from '../middleware/validate.js'
 import { createUserSchema, updateUserSchema } from '../schema/user.schema.js'
-
-const JWT_SECRET = process.env.JWT_SECRET || 'prisma-fullstack-api-secret-key'
-const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d'
-
-/** 登录 */
-export async function login(req: Request, res: Response) {
-  try {
-    const { email, password } = req.body
-    if (!email) return error(res, '邮箱不能为空', 400)
-    if (!password) return error(res, '密码不能为空', 400)
-
-    const user = await prisma.user.findUnique({ where: { email } })
-    if (!user) return error(res, '账号不存在', 400)
-    if (user.password !== password) return error(res, '密码错误', 400)
-
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN as any }
-    )
-
-    const { password: _, ...userInfo } = user
-    success(res, { user: userInfo, token }, '登录成功')
-  } catch (e) {
-    console.error('登录错误:', e)
-    error(res, '登录失败', 500)
-  }
-}
 
 /** 获取当前登录用户信息 */
 export async function profile(req: Request, res: Response) {
