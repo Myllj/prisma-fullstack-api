@@ -1,34 +1,47 @@
-# Prisma 全栈 API 学习项目
+# Prisma 全栈 API
 
-**项目版本**：v2.0.0
+**项目版本**：v3.0.0
 
-**最后更新**：2026-07-08
+**最后更新**：2026-07-10
 
-**项目类型**：Node.js 后端 API 服务（学习项目）
+**维护人员**：Myllj
+
+**远程仓库**：`git@github.com:Myllj/prisma-fullstack-api.git`
+
+---
 
 ## 一、项目简介
 
-本项目是一套基于 **Express + Prisma 7.x + MySQL** 的后端 API 服务，用于学习 Prisma ORM 的完整使用流程，包括 Schema 定义、数据库迁移、CRUD 操作、关联查询（include/select）、RESTful API 接口开发，以及工程化升级（全局错误处理、Zod 参数校验、环境配置、模块化目录）。
+本项目是一套基于 **Express + Prisma 7.x + MySQL + JWT** 的后端 RESTful API 模板仓库，涵盖用户管理、文章管理两大业务模块的完整开发链路，适用于个人学习、团队快速搭建 Node.js 后端项目、企业级接口开发模板。
 
-实现**用户管理**、**文章管理**两大模块的完整增删改查，支持分页、模糊搜索、关联查询等进阶功能。
+核心能力：
+- 用户注册/登录/JWT 令牌签发与鉴权
+- 文章增删改查、分页搜索、权限隔离（仅作者可改删）
+- Zod 参数校验全覆盖、统一响应格式、全局错误脱敏
+- 工程化目录分层，开箱即用
+
+---
 
 ## 二、技术栈
 
 ### 后端技术栈
 
-- 运行时：Node.js（ESM 模块）
+- 运行时：Node.js 18+（ESM 模块）
 - 框架：Express 5.x
-- 语言：TypeScript 6.x
-- ORM：Prisma 7.x
+- 语言：TypeScript
+- ORM：Prisma 7.x（MariaDB 驱动适配器）
+- 鉴权：JWT（jsonwebtoken）
 - 参数校验：Zod 4.x
 - 运行工具：tsx（开发/生产双模式）
+- 环境变量：dotenv
 
 ### 数据库与中间件
 
 - 数据库：MySQL 8.0+
-- 数据库适配器：@prisma/adapter-mariadb
 - 跨域：cors
-- 环境变量：dotenv
+- 部署：PM2 / Docker（可选）
+
+---
 
 ## 三、环境依赖
 
@@ -38,68 +51,58 @@
 - MySQL 8.0+
 - Git
 
+---
+
 ## 四、项目目录结构
 
 ```
 prisma-fullstack-api
-├── doc/                              # 项目文档
-│   ├── day1.md                       # Day1 搭建指南
-│   ├── day2.md                       # Day2 进阶任务清单
-│   └── 项目 README.md 标准模板（企业交付版）.md
-├── prisma/                           # Prisma 数据库相关
-│   ├── generated/prisma/             # Prisma Client 自动生成代码
-│   ├── migrations/                   # 数据库迁移历史
-│   │   └── 20260627070528_init_user_post/
-│   └── schema.prisma                 # 数据模型定义（你唯一需要关心的文件）
-├── src/                              # 业务源码
-│   ├── server.ts                     # Express 服务入口（路由 + 业务逻辑）
-│   ├── prisma.ts                     # Prisma 单例封装（读取 .env 配置）
-│   ├── db-test.ts                    # CRUD 测试脚本
-│   ├── utils/
-│   │   ├── response.ts              # success() / error() 统一响应工具
-│   │   └── validation.ts            # Zod 校验规则 + validate() 工具函数
-│   └── middleware/
-│       └── error.ts                  # 404拦截 + 全局错误捕获中间件
-├── .env                              # 环境变量（含敏感信息，不提交 Git）
-├── .env.example                      # 环境变量模板（可安全提交 Git）
-├── .gitignore                        # Git 忽略配置
-├── prisma.config.ts                  # Prisma 7.x 配置文件
-├── tsconfig.json                     # TypeScript 配置
-├── package.json                      # 项目依赖与脚本
-├── 踩坑总结.md                        # 踩坑经验记录
-└── README.md                         # 项目说明文档
+├── prisma/                              # Prisma 数据库相关
+│   ├── schema.prisma                    # 数据模型定义（User / Post）
+│   ├── migrations/                      # 数据库迁移历史
+│   └── generated/prisma/               # Prisma Client 自动生成（不入库）
+├── src/
+│   ├── server.ts                        # Express 入口（路由挂载 + 中间件）
+│   ├── prisma.ts                        # Prisma Client 单例封装
+│   ├── controller/
+│   │   ├── user.controller.ts           # 用户业务逻辑（登录/CRUD）
+│   │   └── post.controller.ts           # 文章业务逻辑（分页/权限校验）
+│   ├── route/
+│   │   ├── user.route.ts                # 用户路由挂载
+│   │   └── post.route.ts                # 文章路由挂载（统一鉴权）
+│   ├── schema/
+│   │   ├── user.schema.ts               # 用户 Zod 校验规则
+│   │   └── post.schema.ts               # 文章 Zod 校验规则
+│   ├── middleware/
+│   │   ├── auth.ts                      # JWT 鉴权中间件
+│   │   ├── validate.ts                  # Zod 通用校验工具
+│   │   └── error.ts                     # 404 拦截 + 全局错误捕获
+│   └── utils/
+│       └── response.ts                  # success() / error() 统一响应
+├── docs/                                # 项目文档
+│   ├── day1.md                          # Day1 搭建指南
+│   ├── day2.md                          # Day2 进阶任务清单
+│   └── Day3 后端进阶任务（JWT登录鉴权 + 接口权限控制）.md
+├── test_data/                           # 测试种子数据
+│   ├── seed.ts                          # 生成 10 用户 + 50 文章的测试数据
+│   └── README.md                        # 测试数据操作指南
+├── .env.example                         # 环境变量模板（可提交 Git）
+├── .gitignore                           # Git 忽略规则
+├── prisma.config.ts                     # Prisma 7.x 配置文件
+├── tsconfig.json                        # TypeScript 配置
+├── package.json                         # 项目依赖与脚本
+├── 踩坑总结.md                           # 踩坑经验记录
+└── README.md                            # 本文件
 ```
 
-## 五、核心文件说明
+---
 
-### prisma/ 文件夹
-
-| 文件 | 谁写的 | 作用 |
-|------|--------|------|
-| `schema.prisma` | **你** | 定义表结构、字段、关系 |
-| `migration.sql` | Prisma 自动 | 具体的 SQL 建表语句 |
-| `client.ts` | Prisma 自动 | 导出 `PrismaClient` 类 |
-| `models.ts` | Prisma 自动 | 导出 `prisma.user`、`prisma.post` 操作方法 |
-| `enums.ts` | Prisma 自动 | 导出 Role 枚举 |
-
-> **日常你只需要管 `schema.prisma` 一个文件，其他全是自动生成的。**
-
-### src/ 核心文件
-
-| 文件 | 作用 |
-|------|------|
-| `server.ts` | 主入口文件，包含所有路由和业务逻辑 |
-| `prisma.ts` | Prisma 客户端单例，连接 MySQL 数据库 |
-| `utils/response.ts` | 统一响应格式 `success()` / `error()` |
-| `utils/validation.ts` | Zod 校验规则 + 通用校验函数 |
-| `middleware/error.ts` | 404 拦截 + 全局错误捕获中间件 |
-
-## 六、本地开发启动步骤
+## 五、本地开发启动步骤
 
 ### 1. 拉取代码
 
 ```bash
-git clone 项目仓库地址
+git clone git@github.com:Myllj/prisma-fullstack-api.git
 cd prisma-fullstack-api
 ```
 
@@ -111,24 +114,27 @@ npm install
 
 ### 3. 配置环境变量
 
-编辑根目录 `.env` 文件，修改数据库连接信息：
+```bash
+# 复制环境变量模板
+cp .env.example .env
+```
+
+编辑 `.env`，填入本地数据库连接信息：
 
 ```env
-# ===== 服务配置 =====
 PORT=3000
-
-# ===== 数据库配置 =====
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=7d
 DATABASE_HOST=127.0.0.1
 DATABASE_PORT=3306
 DATABASE_USER=root
 DATABASE_PASSWORD=你的数据库密码
 DATABASE_NAME=prisma_demo
 DATABASE_CHARSET=utf8mb4
+DATABASE_URL="mysql://root:你的数据库密码@127.0.0.1:3306/prisma_demo"
 ```
 
 ### 4. 创建数据库
-
-在 MySQL 中手动创建空数据库（字符集 utf8mb4）：
 
 ```bash
 mysql -u root -p
@@ -139,64 +145,151 @@ exit;
 ### 5. 数据库迁移
 
 ```bash
-# 执行迁移，自动创建数据表
 npx prisma migrate dev --name init_user_post
-
-# 生成 Prisma Client 类型（提供 TS 语法提示）
 npx prisma generate
 ```
 
-### 6. 启动开发服务
+### 6. 启动服务
 
 ```bash
-# 开发模式
+# 开发模式（推荐）
 npm run dev
 
 # 或生产模式
 npm start
 ```
 
-服务启动后访问：http://localhost:3000
+服务启动后控制台输出：`服务运行在 http://localhost:3000`
 
-### 7. 运行 CRUD 测试（可选）
+---
 
-```bash
-npm run db:test
-```
-
-## 七、环境变量配置说明
+## 六、环境变量配置说明
 
 | 变量名 | 说明 | 示例值 |
 |--------|------|--------|
-| `PORT` | 服务端口 | 3000 |
-| `DATABASE_HOST` | 数据库地址 | 127.0.0.1 |
-| `DATABASE_PORT` | 数据库端口 | 3306 |
-| `DATABASE_USER` | 数据库账号 | root |
-| `DATABASE_PASSWORD` | 数据库密码 | 123456 |
-| `DATABASE_NAME` | 数据库名称 | prisma_demo |
-| `DATABASE_CHARSET` | 数据库字符集 | utf8mb4 |
+| `PORT` | 服务端口 | `3000` |
+| `JWT_SECRET` | JWT 签名密钥（线上务必修改） | `your-secret-key` |
+| `JWT_EXPIRES_IN` | Token 过期时间 | `7d`（7天） |
+| `DATABASE_HOST` | 数据库地址 | `127.0.0.1` |
+| `DATABASE_PORT` | 数据库端口 | `3306` |
+| `DATABASE_USER` | 数据库账号 | `root` |
+| `DATABASE_PASSWORD` | 数据库密码 | `your_password` |
+| `DATABASE_NAME` | 数据库名称 | `prisma_demo` |
+| `DATABASE_CHARSET` | 字符集 | `utf8mb4` |
+| `DATABASE_URL` | Prisma 连接串（migrate 使用） | `mysql://root:密码@127.0.0.1:3306/prisma_demo` |
 
-## 八、数据库说明
+---
+
+## 七、数据库说明
 
 - **数据库名称**：`prisma_demo`
-- **字符集**：`utf8mb4`（兼容中文、表情符号，避免乱码）
-- **初始化方式**：执行 `npx prisma migrate dev` 自动建表
-- **数据模型**：
+- **字符集**：`utf8mb4`（兼容中文、表情，避免乱码）
+
+### 数据模型
 
 | 表名 | 说明 | 主要字段 |
 |------|------|----------|
 | `User` | 用户表 | id, name, email（唯一）, password, role（USER/ADMIN）, createdAt |
-| `Post` | 文章表 | id, title, content, userId（外键关联 User）, createdAt |
+| `Post` | 文章表 | id, title, content, userId（外键 → User，级联删除）, createdAt |
 
-数据库重置命令：
+### 修改模型与增量迁移（重要）
+
+后续需求变动需要改表结构（如给 User 表新增 `avatar`、Post 表新增 `status`），操作流程如下：
+
+#### 开发环境（本地）
+
+**1. 修改 schema.prisma**
+
+例如给 User 表新增头像字段：
+
+```prisma
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String
+  email     String    @unique
+  avatar    String?                             // ← 新增字段，? 表示允许为空
+  password  String
+  role      Role      @default(USER)
+  posts     Post[]
+  createdAt DateTime  @default(now())
+}
+```
+
+> `String?` 表示可选字段，允许为空，避免已有数据报错。如果必须非空，需要加 `@default("")` 给默认值。
+
+**2. 生成迁移文件并同步到数据库**
+
+```bash
+npx prisma migrate dev --name add_user_avatar
+```
+
+这里 Prisma 会：
+- 自动对比 `schema.prisma` 与当前数据库结构差异
+- 生成 `prisma/migrations/2026xxxxxxxx_add_user_avatar/migration.sql`
+- 立即执行 SQL，更新本地数据库表结构
+- 重新生成 Prisma Client 类型
+
+**3. 修改业务代码**
+
+在 controller 中处理新增字段（如 Zod 校验、返回值）。
+
+#### 生产环境（线上）
+
+**方案一：Prisma 自动迁移（推荐，适合中小项目）**
+
+```bash
+# 服务器上拉取最新代码
+git pull
+
+# 执行待执行的迁移（不重置数据）
+npx prisma migrate deploy
+
+# 重新生成类型
+npx prisma generate
+
+# 重启服务
+pm2 restart prisma-api
+```
+
+> `migrate deploy` 只执行未应用的迁移文件，不删除数据。
+
+**方案二：手动 SQL（适合严格管控的团队）**
+
+```bash
+# 先在测试库验证 SQL
+npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma
+
+# 手动在线上数据库执行 ALTER TABLE
+ALTER TABLE User ADD COLUMN avatar VARCHAR(255);
+
+# 标记迁移已完成
+npx prisma migrate resolve --applied <migration_name>
+```
+
+#### 常用迁移命令速查
+
+| 命令 | 场景 | 说明 |
+|------|------|------|
+| `npx prisma migrate dev --name xxx` | 本地开发 | 自动生成迁移 → 应用到本地库 |
+| `npx prisma migrate deploy` | 生产上线 | 只执行未应用的迁移，不删数据 |
+| `npx prisma migrate status` | 任意环境 | 查看迁移状态 |
+| `npx prisma migrate reset` | 本地开发 | 重置数据库（删除所有数据后重建） |
+| `npx prisma generate` | 任意环境 | 重新生成 Prisma Client TS 类型 |
+| `npx prisma db push` | 快速原型 | 跳过迁移文件直接同步 Schema 到库（开发推荐） |
+
+> **核心区别**：`migrate dev` 生成迁移文件 + 应用；`migrate deploy` 只应用已存在的迁移文件；`db push` 不生成迁移文件直接推送。
+
+### 重置数据库
 
 ```bash
 npx prisma migrate reset
 ```
 
-## 九、接口文档
+---
 
-所有接口统一响应格式：
+## 八、接口文档
+
+### 统一响应格式
 
 ```json
 {
@@ -206,30 +299,68 @@ npx prisma migrate reset
 }
 ```
 
+### 鉴权说明
+
+文章全部接口需要登录，请求头携带：
+
+```
+Authorization: Bearer <token>
+```
+
+token 通过 `/api/user/login` 接口获取。
+
+---
+
 ### 用户接口
 
-| 方法 | 路径 | 说明 | 请求参数 |
-|------|------|------|----------|
-| GET | `/api/user/list` | 获取全部用户（含文章） | 无 |
-| GET | `/api/user/:id` | 获取用户详情（含文章） | 路径参数：id |
-| POST | `/api/user/create` | 新增用户 | `{ name, email, password }` |
-| PUT | `/api/user/:id` | 更新用户（传什么改什么） | 路径参数：id；`{ name?, email?, password? }` |
-| DELETE | `/api/user/:id` | 删除用户（防外键崩溃） | 路径参数：id |
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|:---:|------|
+| POST | `/api/user/login` | ❌ | 登录，返回 token + 用户信息 |
+| GET | `/api/user/list` | ❌ | 查询全部用户（含文章） |
+| GET | `/api/user/profile` | ✅ | 查询当前登录用户信息 |
+| GET | `/api/user/:id` | ❌ | 查询单个用户详情 |
+| POST | `/api/user/create` | ❌ | 新增用户（注册） |
+| PUT | `/api/user/:id` | ❌ | 更新用户 |
+| DELETE | `/api/user/:id` | ❌ | 删除用户（存在文章时拦截） |
 
 ### 文章接口
 
-| 方法 | 路径 | 说明 | 请求参数 |
-|------|------|------|----------|
-| GET | `/api/post/list` | 分页+模糊搜索文章列表 | Query：`page`, `pageSize`, `keyword` |
-| GET | `/api/post/:id` | 获取文章详情（含作者信息） | 路径参数：id |
-| POST | `/api/post/create` | 新增文章 | `{ title, content, userId }` |
-| PUT | `/api/post/:id` | 更新文章 | 路径参数：id；`{ title?, content? }` |
-| DELETE | `/api/post/:id` | 删除文章 | 路径参数：id |
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|:---:|------|
+| GET | `/api/post/list` | ✅ | 分页查询，支持关键词模糊搜索 |
+| GET | `/api/post/:id` | ✅ | 文章详情（含作者信息） |
+| POST | `/api/post/create` | ✅ | 新增文章（userId 自动绑定当前用户） |
+| PUT | `/api/post/:id` | ✅ | 更新文章（仅作者本人） |
+| DELETE | `/api/post/:id` | ✅ | 删除文章（仅作者本人） |
 
-### 文章分页搜索说明
+### 接口请求示例
 
+**登录：**
+
+```bash
+POST http://localhost:3000/api/user/login
+Content-Type: application/json
+
+{ "email": "test@123.com", "password": "123456" }
+# 返回: { code: 200, msg: "登录成功", data: { user: {...}, token: "eyJ..." } }
 ```
-GET /api/post/list?page=1&pageSize=10&keyword=学习
+
+**新增文章（带 token）：**
+
+```bash
+POST http://localhost:3000/api/post/create
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+
+{ "title": "学习笔记", "content": "Prisma 入门" }
+# 无需传 userId，自动从 token 读取当前登录用户
+```
+
+**分页搜索文章：**
+
+```bash
+GET http://localhost:3000/api/post/list?page=1&pageSize=10&keyword=学习
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
@@ -238,65 +369,95 @@ GET /api/post/list?page=1&pageSize=10&keyword=学习
 | `page` | number | 否 | 1 | 页码 |
 | `pageSize` | number | 否 | 10 | 每页条数（1~100） |
 
-### Zod 参数校验说明
+---
 
-以下写入接口自带参数前置校验：
+## 九、参数校验说明
+
+以下写入接口自带 Zod 前置校验：
 
 | 接口 | 校验内容 |
 |------|---------|
-| `POST /api/user/create` | name 必填(1-50字符)、email 必填(邮箱格式)、password 必填(6-50字符) |
-| `PUT /api/user/:id` | name/email/password 选填，传了则按相同规则校验 |
-| `POST /api/post/create` | title 必填(1-200字符)、content 必填、userId 必须是正整数 |
-| `PUT /api/post/:id` | title/content 选填，传了则校验 |
+| `POST /api/user/create` | name(1-50字符)、email(邮箱格式)、password(6-50字符) |
+| `PUT /api/user/:id` | name/email/password 选填，传了按同样规则校验 |
+| `POST /api/post/create` | title(1-200字符)、content 必填 |
+| `PUT /api/post/:id` | title/content 选填 |
 
-校验失败统一返回 `400` + 中文提示，不进入数据库逻辑。
+校验失败统一返回 `400` + 中文提示，不进入数据库。
 
-### Postman 测试示例
+### 错误码速查
 
-**创建用户：**
+| code | 场景 |
+|:---:|------|
+| 200 | 操作成功 |
+| 400 | 参数校验失败 / 业务拦截 |
+| 401 | 未登录 / token 无效或过期 |
+| 403 | 无权操作他人数据 |
+| 404 | 资源不存在 / 接口不存在 |
+| 409 | 邮箱已注册（唯一约束冲突） |
+| 500 | 服务器内部错误（已脱敏） |
 
-```bash
-POST http://localhost:3000/api/user/create
-Content-Type: application/json
-
-{
-  "name": "张三",
-  "email": "zhangsan@123.com",
-  "password": "666666"
-}
-```
-
-**创建文章**（注意：userId 必须使用已存在用户的 id）：
-
-```bash
-POST http://localhost:3000/api/post/create
-Content-Type: application/json
-
-{
-  "title": "全栈学习记录",
-  "content": "Prisma+Express 实操",
-  "userId": 1
-}
-```
+---
 
 ## 十、可用脚本
 
 | 命令 | 说明 |
 |------|------|
-| `npm run dev` | 启动开发服务器（tsx 热加载） |
-| `npm start` | 生产模式启动（node + tsx 加载器） |
-| `npm run db:test` | 运行 CRUD 测试脚本 |
-| `npx prisma studio` | 打开 Prisma Studio 可视化查看数据 |
-| `npx prisma migrate dev` | 执行数据库迁移（开发环境） |
+| `npm run dev` | 启动开发服务器（tsx） |
+| `npm start` | 生产模式启动 |
+| `npm run stop` | 停止 3000 端口服务 |
+| `npx prisma studio` | 可视化查看数据库 |
+| `npx prisma migrate dev` | 执行数据库迁移 |
 | `npx prisma generate` | 重新生成 Prisma Client |
+| `npx prisma migrate reset` | 重置数据库 |
 
-## 十一、开发规范
+---
+
+## 十一、打包与线上部署
+
+### PM2 部署（推荐）
+
+```bash
+npm install -g pm2
+npm start -- --port=80
+pm2 start src/server.ts --name=prisma-api
+pm2 save
+pm2 startup
+```
+
+### Docker 部署（可选）
+
+自行编写 `Dockerfile`，核心步骤：
+
+1. 构建 Node.js 环境镜像
+2. 复制源码 + 安装依赖
+3. 执行 `prisma generate`
+4. `CMD ["npm", "start"]`
+
+---
+
+## 十二、仓库复用规则
+
+本仓库可作为**私有模板仓库**，新项目克隆后只需以下步骤即可快速启动：
+
+1. `git clone git@github.com:Myllj/prisma-fullstack-api.git new-project`
+2. 修改 `prisma/schema.prisma` → 定义自己的数据模型
+3. 修改 `.env` → 配置自己的数据库连接和 JWT 密钥
+4. `npx prisma migrate dev --name init` → 建表
+5. 在 `src/controller/` 下新增业务模块
+6. 在 `src/route/` 下注册路由
+7. 在 `src/server.ts` 挂载新路由
+8. `npm run dev` → 启动开发
+
+---
+
+## 十三、开发规范
 
 ### Git 分支规范
 
-- **main**：主分支
-- **dev**：开发分支
+- **main**：线上稳定分支，禁止直接提交
+- **dev**：开发测试分支
 - **feature/xxx**：新功能分支
+- **hotfix/xxx**：线上紧急修复分支
 
 ### Commit 提交规范
 
@@ -305,74 +466,71 @@ Content-Type: application/json
 - `refactor`：代码重构
 - `docs`：文档修改
 
-## 十二、常见问题 FAQ
+---
 
-**Q：执行 `npx prisma migrate dev` 报错？**
-
-A：Prisma 7.x 与 6.x 语法不兼容，请确保 schema.prisma 使用 `provider = "prisma-client"`（非 `prisma-client-js`），且 `@relation` 为单行格式。详见 `踩坑总结.md`。
-
-**Q：导入报错 Cannot find module？**
-
-A：项目使用 ESM 模式（`"type": "module"`），所有本地导入必须使用 `.js` 扩展名（如 `import prisma from './prisma.js'`），tsx 运行时会自动查找同名的 `.ts` 文件。
-
-**Q：创建文章时提示外键约束错误？**
-
-A：创建文章前必须先创建用户，确保 `userId` 是数据库中已存在用户的 id。
-
-**Q：数据库 ID 不是从 1 开始？**
-
-A：MySQL 自增主键默认从 1 开始，但删除数据后自增计数器不会重置（例如删除 ID=1 的用户，下一个用户 ID=2）。这是正常行为，不影响功能。
+## 十四、常见问题 FAQ
 
 **Q：端口被占用？**
 
-A：关闭占用 3000 端口的程序，或修改 `.env` 文件中的 `PORT` 变量。
+A：关闭占用端口的程序，或修改 `.env` 中 `PORT` 变量。
 
 **Q：数据库连接失败？**
 
-A：检查 `.env` 中数据库配置（DATABASE_HOST/PORT/USER/PASSWORD/NAME）是否正确，数据库 `prisma_demo` 是否已创建。
+A：检查 `.env` 数据库地址、账号密码是否正确，数据库 `prisma_demo` 是否已创建。
+
+**Q：创建文章时报外键约束错误？**
+
+A：创建文章前必须先创建用户。Day3 起新增文章不需要传 `userId`，会自动从 token 读取当前登录用户。
+
+**Q：Prisma migrate 报语法错误？**
+
+A：Prisma 7.x 与 6.x 语法不兼容，确保 `schema.prisma` 使用 `provider = "prisma-client"`，`@relation` 为单行格式。详见 `踩坑总结.md`。
+
+**Q：导入报错 Cannot find module？**
+
+A：项目使用 ESM 模式，所有本地导入必须使用 `.js` 扩展名（tsx 运行时自动查找同名 `.ts` 文件）。
+
+**Q：Navicat 中中文显示乱码？**
+
+A：连接属性中设置编码为 `utf8mb4`，执行 `SET NAMES utf8mb4`。
 
 **Q：依赖安装报错？**
 
-A：尝试清理 node_modules 和 package-lock.json 后重新安装：
+A：清理 node_modules 和 lock 文件后重新安装：
 
 ```bash
-Remove-Item -Recurse -Force node_modules, package-lock.json
+rm -rf node_modules package-lock.json
 npm install
 ```
 
-**Q：Navicat 中看到中文显示为 `?` 号乱码？**
+---
 
-A：连接属性中设置编码为 `utf8mb4`；sql_mode 中移除 `STRICT_TRANS_TABLES`；执行 `SET NAMES utf8mb4`。
+## 十五、版本更新日志
 
-## 十三、版本更新日志
+**v3.0.0（2026-07-10）**
+
+- 实现 JWT 登录鉴权，token 签发与过期校验
+- 封装通用鉴权中间件，文章全接口强制登录
+- 文章权限隔离：仅作者可修改/删除自己的文章
+- 新增文章自动绑定当前登录用户（userId 从 token 读取）
+- 工程化目录重构（controller / route / schema / middleware 分层）
+- 密钥抽离 `.env`，消除硬编码安全漏洞
+- 配置 `.gitignore` + `.env.example`，规范 Git 提交
 
 **v2.0.0（2026-07-08）**
 
-- 新增用户完整 CRUD（详情、更新、删除）
-- 新增文章完整 CRUD（详情、更新、删除）
-- 文章列表支持分页 + 标题模糊搜索
-- 查询文章自动带出作者完整信息
-- 封装全局统一响应工具函数（success/error）
-- 新增 404 拦截 + 全局错误捕获中间件（Prisma 错误脱敏）
-- 接入 Zod 参数校验，4 个写入接口全覆盖
-- 抽离环境变量 `.env`，新增 `.env.example`
-- 目录模块化拆分（utils/、middleware/）
-- 补充 `npm start` 生产启动脚本
+- 用户/文章完整 CRUD 闭环
+- 文章分页 + 标题模糊搜索，查询自动带出作者信息
+- 全局统一响应格式 + 404 拦截 + 全局错误脱敏
+- Zod 参数校验全覆盖 4 个写入接口
+- 环境变量抽离，目录模块化拆分
 
-**v1.0.0（2026-06-29）**
+**v1.0.0（2026-06-27）**
 
-- 项目初版完成，基于 Prisma 7.x + Express 5.x + TypeScript 6.x
-- 实现 User、Post 模型定义与数据库迁移
-- 完成 Prisma Client 单例封装（含 MariaDB 驱动适配器）
-- 实现完整 CRUD 操作，支持 include/select 联查查询
-- 实现 Express RESTful API 接口（用户/文章增删改查）
-- 配置 ESM 模块支持，使用 tsx 作为开发运行工具
+- 项目初始化，Prisma 7.x + Express + TypeScript
+- User/Post 模型定义与数据库迁移
+- 基础 CRUD API 接口
 
-## 十四、备注说明
-
-- 本项目为 Prisma + Express 学习项目，仅供学习参考
-- 完整搭建流程详见 `doc/day1.md`
-- Day2 进阶任务清单详见 `doc/day2.md`
-- 踩坑经验汇总详见 `踩坑总结.md`
+---
 
 > （注：部分内容可能由 AI 生成）
