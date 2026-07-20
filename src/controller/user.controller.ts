@@ -3,6 +3,7 @@ import prisma from '../prisma.js'
 import { success, error } from '../utils/response.js'
 import { validate } from '../middleware/validate.js'
 import { createUserSchema, updateUserSchema } from '../schema/user.schema.js'
+import { hashPassword } from '../utils/password.js'
 
 /** 获取当前登录用户信息 */
 export async function profile(req: Request, res: Response) {
@@ -22,7 +23,8 @@ export async function profile(req: Request, res: Response) {
 /** 获取全部用户 */
 export async function list(req: Request, res: Response) {
   try {
-    const list = await prisma.user.findMany({ include: { posts: true } })
+    const users = await prisma.user.findMany({ include: { posts: true } })
+    const list = users.map(({ password: _, ...rest }) => rest)
     success(res, list, '查询成功')
   } catch (e) {
     error(res, '查询用户列表失败', 500)
@@ -34,8 +36,12 @@ export async function create(req: Request, res: Response) {
   try {
     const data = validate(createUserSchema, req.body, res)
     if (!data) return
-    const user = await prisma.user.create({ data })
-    success(res, user, '用户创建成功')
+    const hashedPassword = await hashPassword(data.password)
+    const user = await prisma.user.create({
+      data: { ...data, password: hashedPassword }
+    })
+    const { password: _, ...userInfo } = user
+    success(res, userInfo, '用户创建成功')
   } catch (e: any) {
     if (e.code === 'P2002') return error(res, '该邮箱已注册', 409)
     error(res, '用户创建失败', 500)
@@ -48,7 +54,8 @@ export async function detail(req: Request, res: Response) {
     const id = Number(req.params.id)
     const user = await prisma.user.findUnique({ where: { id }, include: { posts: true } })
     if (!user) return error(res, '用户不存在', 404)
-    success(res, user, '查询成功')
+    const { password: _, ...userInfo } = user
+    success(res, userInfo, '查询成功')
   } catch (e) {
     error(res, '查询用户失败', 500)
   }
@@ -62,8 +69,12 @@ export async function update(req: Request, res: Response) {
     const id = Number(req.params.id)
     const user = await prisma.user.findUnique({ where: { id } })
     if (!user) return error(res, '用户不存在', 404)
+    if (data.password) {
+      data.password = await hashPassword(data.password)
+    }
     const updated = await prisma.user.update({ where: { id }, data })
-    success(res, updated, '用户更新成功')
+    const { password: _, ...userInfo } = updated
+    success(res, userInfo, '用户更新成功')
   } catch (e) {
     error(res, '用户更新失败', 500)
   }

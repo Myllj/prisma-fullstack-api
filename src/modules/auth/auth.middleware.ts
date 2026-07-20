@@ -38,3 +38,14 @@ export function auth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ code: 401, msg: 'token 无效，请重新登录' })
   }
 }
+
+/** 管理员权限中间件：在 auth 之后使用，校验当前用户角色是否为 ADMIN */
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (!req.user) {
+    return res.status(401).json({ code: 401, msg: '未登录，请先登录' })
+  }
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({ code: 403, msg: '无操作权限，仅管理员可执行此操作' })
+  }
+  next()
+}

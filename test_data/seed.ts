@@ -1,25 +1,45 @@
 /**
  * 测试种子数据脚本
  * 功能：生成 10 个用户 + 50 篇文章，文章随机分配给不同用户
+ *       密码使用 bcrypt 加密存储（符合行业安全规范）
+ *       邮箱使用标准 ASCII 格式（符合 RFC 5322）
  *
- * 执行方式：npx tsx test/seed.ts
+ * 执行方式：npx tsx test_data/seed.ts
  */
 
 import prisma from '../src/prisma.js'
+import { hashPassword } from '../src/utils/password.js'
 
-// ===== 随机密码生成 =====
+/** 生成 8 位随机密码 */
 function randomPassword(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
   return Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-// ===== 10 个用户数据（密码随机生成）=====
+// ===== 10 个用户数据（标准 ASCII 邮箱，密码随机生成）=====
 const userNames = ['张三', '李四', '王五', '赵六', '孙七', '周八', '吴九', '郑十', '冯十一', '陈十二']
-const users = userNames.map((name, i) => ({
+
+// 拼音映射（用于生成符合 RFC 5322 的标准邮箱）
+const emailMap: Record<string, string> = {
+  '张三': 'zhangsan',   '李四': 'lisi',     '王五': 'wangwu',
+  '赵六': 'zhaoliu',    '孙七': 'sunqi',    '周八': 'zhouba',
+  '吴九': 'wujiu',      '郑十': 'zhengshi', '冯十一': 'fengshiyi',
+  '陈十二': 'chenshier'
+}
+
+const users = userNames.map(name => ({
   name,
-  email: `${name}@test.com`,
-  password: randomPassword(),
+  email: `${emailMap[name]}@test.com`,   // 标准 ASCII 邮箱，不支持中文
+  plainPassword: randomPassword(),        // 明文密码（仅用于终端显示）
 }))
+
+/** 管理员账号（固定密码，方便记忆） */
+const adminUser = {
+  name: '管理员',
+  email: 'admin@test.com',
+  plainPassword: 'admin123',
+  role: 'ADMIN' as const,
+}
 
 // ===== 50 篇文章标题 + 内容 =====
 const postTemplates = [
@@ -100,32 +120,41 @@ function shuffle<T>(arr: T[]): T[] {
 async function seed() {
   console.log('🌱 开始生成测试数据...\n')
 
-  // 1. 创建 10 个用户
-  console.log('📦 创建 10 个用户...')
-  const createdUsers: { id: number; name: string; password: string }[] = []
+  // 1. 创建管理员账号
+  console.log('📦 创建管理员账号...')
+  const adminHashedPassword = await hashPassword(adminUser.plainPassword)
+  const admin = await prisma.user.upsert({
+    where: { email: adminUser.email },
+    update: { name: adminUser.name, password: adminHashedPassword, role: adminUser.role },
+    create: { name: adminUser.name, email: adminUser.email, password: adminHashedPassword, role: adminUser.role }
+  })
+  console.log(`  ✅ [${admin.id}] ${adminUser.name} — ${adminUser.email}  (密码: ${adminUser.plainPassword})`)
+
+  // 2. 创建 10 个普通用户（密码 bcrypt 加密存储）
+  console.log('📦 创建 10 个用户（密码 bcrypt 加密存储）...')
+  const createdUsers: { id: number; name: string; email: string; password: string }[] = []
 
   for (const u of users) {
-    const user = await prisma.user.create({ data: u })
-    createdUsers.push({ id: user.id, name: user.name, password: u.password })
-    console.log(`  ✅ [${user.id}] ${user.name} — ${user.email}  (密码: ${u.password})`)
+    const hashedPassword = await hashPassword(u.plainPassword)
+    const user = await prisma.user.create({
+      data: { name: u.name, email: u.email, password: hashedPassword, role: 'USER' }
+    })
+    createdUsers.push({ id: user.id, name: user.name, email: u.email, password: u.plainPassword })
+    console.log(`  ✅ [${user.id}] ${user.name} — ${user.email}  (密码: ${u.plainPassword})`)
   }
 
   console.log(`\n📝 创建 50 篇文章（随机分配给 ${createdUsers.length} 个用户）...`)
 
   // 2. 给每个用户随机分配文章数量（保证总和 = 50）
-  //    生成 10 个随机数 → 归一化为总和 50
   const rawCounts = createdUsers.map(() => randInt(1, 10))
   const rawSum = rawCounts.reduce((a, b) => a + b, 0)
-  // 按比例分配，最终调整为总和 = 50
   let counts = rawCounts.map(c => Math.round((c / rawSum) * 50))
-  // 修正四舍五入导致的误差
   let diff = 50 - counts.reduce((a, b) => a + b, 0)
   for (let i = 0; diff !== 0; i++) {
     if (diff > 0) { counts[i % counts.length]++;  diff-- }
     else           { counts[i % counts.length]--;  diff++ }
   }
 
-  // 显示分配情况
   for (let i = 0; i < createdUsers.length; i++) {
     console.log(`  👤 ${createdUsers[i].name}: ${counts[i]} 篇文章`)
   }
@@ -141,11 +170,7 @@ async function seed() {
     for (let j = 0; j < count; j++) {
       const template = shuffled[cursor++]
       const post = await prisma.post.create({
-        data: {
-          title: template.title,
-          content: template.content,
-          userId,
-        },
+        data: { title: template.title, content: template.content, userId }
       })
       console.log(`  ✅ 文章[${post.id}] "${template.title.slice(0, 16)}..." → ${createdUsers[i].name}`)
     }
@@ -154,7 +179,7 @@ async function seed() {
   // 4. 统计汇总
   const [userTotal, postTotal] = await Promise.all([
     prisma.user.count(),
-    prisma.post.count(),
+    prisma.post.count()
   ])
 
   console.log('\n🎉 测试数据生成完成！')
@@ -166,6 +191,12 @@ async function seed() {
   for (const u of createdUsers) {
     const c = await prisma.post.count({ where: { userId: u.id } })
     console.log(`   ${u.name}: ${c} 篇`)
+  }
+
+  console.log('\n🔑 用户密码清单（数据库存储的是 bcrypt 哈希，不会泄露明文）:')
+  console.log(`   管理员  |  ${adminUser.email}  |  密码: ${adminUser.plainPassword}`)
+  for (const u of createdUsers) {
+    console.log(`   ${u.name}  |  ${u.email}  |  密码: ${u.password}`)
   }
 }
 

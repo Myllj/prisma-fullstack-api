@@ -16,13 +16,16 @@ enum Role {
 
 // 用户表
 model User {
-  id        Int       @id @default(autoincrement()) // 主键自增ID
-  name      String                                  // 用户名，非空
-  email     String    @unique                       // 邮箱唯一，不可重复注册
-  password  String                                  // 加密密码
-  role      Role      @default(USER)                // 角色默认普通用户
-  posts     Post[]                                  // 一对多：关联多篇文章
-  createdAt DateTime  @default(now())               // 创建时间，默认当前时间
+  id             Int       @id @default(autoincrement()) // 主键自增ID
+  name           String                                  // 用户名，非空
+  email          String    @unique                       // 邮箱唯一，不可重复注册
+  password       String                                  // 加密密码
+  role           Role      @default(USER)                // 角色默认普通用户
+  posts          Post[]                                  // 一对多：关联多篇文章
+  wechatOpenId   String?   @unique                       // 微信 openid（第三方登录绑定）
+  wechatNickname String?                                  // 微信昵称
+  avatarUrl      String?                                  // 头像 URL
+  createdAt      DateTime  @default(now())               // 创建时间，默认当前时间
 }
 
 // 文章表

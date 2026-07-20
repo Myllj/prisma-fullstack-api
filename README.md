@@ -1,8 +1,8 @@
 # Prisma 全栈 API
 
-**项目版本**：v3.0.0
+**项目版本**：v3.1.0
 
-**最后更新**：2026-07-10
+**最后更新**：2026-07-20
 
 **维护人员**：Myllj
 
@@ -16,6 +16,9 @@
 
 核心能力：
 - 用户注册/登录/JWT 令牌签发与鉴权
+- GitHub OAuth / 微信 OAuth 第三方登录
+- bcrypt 密码加密存储（盐轮数 10），敏感信息脱敏
+- 管理员重置用户密码（ADMIN 角色权限控制）
 - 文章增删改查、分页搜索、权限隔离（仅作者可改删）
 - Zod 参数校验全覆盖、统一响应格式、全局错误脱敏
 - 工程化目录分层，开箱即用
@@ -31,9 +34,18 @@
 - 语言：TypeScript
 - ORM：Prisma 7.x（MariaDB 驱动适配器）
 - 鉴权：JWT（jsonwebtoken）
+- 密码加密：bcryptjs
 - 参数校验：Zod 4.x
 - 运行工具：tsx（开发/生产双模式）
 - 环境变量：dotenv
+
+### 前端技术栈
+
+- 框架：Vue 3 + TypeScript
+- 构建：Vite 6
+- UI 组件：Element Plus
+- 路由：Vue Router 4
+- HTTP：Axios
 
 ### 数据库与中间件
 
@@ -59,39 +71,50 @@
 prisma-fullstack-api
 ├── prisma/                              # Prisma 数据库相关
 │   ├── schema.prisma                    # 数据模型定义（User / Post）
-│   ├── migrations/                      # 数据库迁移历史
-│   └── generated/prisma/               # Prisma Client 自动生成（不入库）
+│   └── migrations/                      # 数据库迁移历史
 ├── src/
 │   ├── server.ts                        # Express 入口（路由挂载 + 中间件）
 │   ├── prisma.ts                        # Prisma Client 单例封装
-│   ├── controller/
-│   │   ├── user.controller.ts           # 用户业务逻辑（登录/CRUD）
+│   ├── modules/                         # 核心模块（推荐组织方式）
+│   │   └── auth/                        # 认证授权模块
+│   │       ├── auth.controller.ts       # 登录/注册/OAuth/重置密码
+│   │       ├── auth.service.ts          # JWT 令牌签发
+│   │       ├── auth.middleware.ts        # JWT 鉴权 + 管理员权限校验
+│   │       ├── auth.schema.ts           # login/register/resetPassword 校验
+│   │       └── auth.route.ts            # Auth 路由注册
+│   ├── controller/                      # 业务控制器
+│   │   ├── user.controller.ts           # 用户业务逻辑
 │   │   └── post.controller.ts           # 文章业务逻辑（分页/权限校验）
-│   ├── route/
-│   │   ├── user.route.ts                # 用户路由挂载
-│   │   └── post.route.ts                # 文章路由挂载（统一鉴权）
-│   ├── schema/
-│   │   ├── user.schema.ts               # 用户 Zod 校验规则
-│   │   └── post.schema.ts               # 文章 Zod 校验规则
-│   ├── middleware/
-│   │   ├── auth.ts                      # JWT 鉴权中间件
+│   ├── route/                           # 路由注册
+│   │   ├── user.route.ts                # 用户路由
+│   │   └── post.route.ts                # 文章路由（统一鉴权）
+│   ├── schema/                          # Zod 参数校验
+│   │   ├── user.schema.ts               # 用户校验规则
+│   │   └── post.schema.ts               # 文章校验规则
+│   ├── middleware/                       # 全局中间件
 │   │   ├── validate.ts                  # Zod 通用校验工具
 │   │   └── error.ts                     # 404 拦截 + 全局错误捕获
-│   └── utils/
-│       └── response.ts                  # success() / error() 统一响应
+│   └── utils/                           # 通用工具
+│       ├── response.ts                  # success() / error() 统一响应
+│       ├── password.ts                  # bcrypt 密码加密/校验工具
+│       └── http.ts                      # HTTP 代理请求（OAuth 回调用）
+├── front-end-test/                      # Vue 3 前端页面（见该目录下 README）
+│   ├── src/views/                       # 7 个页面组件
+│   ├── src/api/                         # Axios 封装
+│   └── src/router/                      # 路由配置 + 守卫
 ├── docs/                                # 项目文档
-│   ├── day1.md                          # Day1 搭建指南
-│   ├── day2.md                          # Day2 进阶任务清单
-│   └── Day3 后端进阶任务（JWT登录鉴权 + 接口权限控制）.md
+│   ├── api-swagger.json                 # Swagger 2.0 接口文档（可导入 Apifox/Postman）
+│   ├── day1.md / day2.md / ...          # 学习阶段笔记
+│   └── 802-独立开发Git代码管理指南.md      # Git 工作流参考
 ├── test_data/                           # 测试种子数据
-│   ├── seed.ts                          # 生成 10 用户 + 50 文章的测试数据
+│   ├── seed.ts                          # 生成 11 用户（含管理员）+ 50 篇文章
 │   └── README.md                        # 测试数据操作指南
 ├── .env.example                         # 环境变量模板（可提交 Git）
 ├── .gitignore                           # Git 忽略规则
 ├── prisma.config.ts                     # Prisma 7.x 配置文件
 ├── tsconfig.json                        # TypeScript 配置
 ├── package.json                         # 项目依赖与脚本
-├── 踩坑总结.md                           # 踩坑经验记录
+├── 踩坑总结.md                           # [辅助] 踩坑经验记录（非项目文件，可删除）
 └── README.md                            # 本文件
 ```
 
@@ -178,6 +201,20 @@ npm start
 | `DATABASE_CHARSET` | 字符集 | `utf8mb4` |
 | `DATABASE_URL` | Prisma 连接串（migrate 使用） | `mysql://root:密码@127.0.0.1:3306/prisma_demo` |
 
+### OAuth 第三方登录配置（可选）
+
+| 变量名 | 说明 | 必填 |
+|--------|------|:---:|
+| `GITHUB_CLIENT_ID` | GitHub OAuth App Client ID | 使用 GitHub 登录时必填 |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App Client Secret | 使用 GitHub 登录时必填 |
+| `WECHAT_APPID` | 微信测试号 AppID | 使用微信登录时必填 |
+| `WECHAT_APPSECRET` | 微信测试号 AppSecret | 使用微信登录时必填 |
+| `FRONTEND_URL` | 前端地址（OAuth 回调跳转） | 默认 `http://localhost:5173` |
+| `OAUTH_REDIRECT_BASE` | OAuth 回调基础地址 | 默认 `http://127.0.0.1:3000` |
+| `HTTPS_PROXY` | HTTPS 代理地址（配置了才走代理） | 如 `http://127.0.0.1:7890` |
+
+> 如果不需要 OAuth 功能，可以忽略这些变量，不配置不影响基础功能。
+
 ---
 
 ## 七、数据库说明
@@ -189,8 +226,18 @@ npm start
 
 | 表名 | 说明 | 主要字段 |
 |------|------|----------|
-| `User` | 用户表 | id, name, email（唯一）, password, role（USER/ADMIN）, createdAt |
+| `User` | 用户表 | id, name, email（唯一）, password（bcrypt 加密）, role（USER/ADMIN）, wechatOpenId, wechatNickname, avatarUrl, createdAt |
 | `Post` | 文章表 | id, title, content, userId（外键 → User，级联删除）, createdAt |
+
+### 种子数据
+
+项目提供测试数据生成脚本（`test_data/seed.ts`），生成：
+
+- **1 个管理员**：`admin@test.com` / `admin123`（role: ADMIN，用于重置密码等管理操作）
+- **10 个普通用户**：张三、李四… 拼音邮箱 + 随机 8 位密码
+- **50 篇文章**：随机分配给 10 个普通用户，涵盖 Node.js、Express、Docker 等热门技术
+
+> 所有密码使用 bcrypt 加密存储，终端输出的明文密码仅用于开发调试，数据库不存明文。
 
 ### 修改模型与增量迁移（重要）
 
@@ -307,7 +354,88 @@ npx prisma migrate reset
 Authorization: Bearer <token>
 ```
 
-token 通过 `/api/user/login` 接口获取。
+token 通过 `/api/auth/login` 接口获取。
+
+### Apifox 在线接口文档
+
+项目已配置 Apifox 在线接口管理，支持在线调试、文档预览、Mock 服务：
+
+- **接口地址**：[https://app.apifox.com/project/8582531](https://app.apifox.com/project/8582531)
+- **接口总数**：12 个（Auth / User / Post 三个模块）
+
+### Apifox 从 0-1 使用指南
+
+#### 步骤 1：登录并进入项目
+
+1. 访问 [https://app.apifox.com/project/8582531](https://app.apifox.com/project/8582531)
+2. 使用账号登录（支持微信/邮箱登录）
+
+#### 步骤 2：配置环境
+
+1. 点击右上角 **环境管理**
+2. 选择 **开发环境**
+3. 配置前置 URL：`http://localhost:3000/api`
+4. 添加环境变量 `token`，初始值留空
+
+#### 步骤 3：获取 Token
+
+1. 打开 **POST /api/auth/login** 接口
+2. 在 Body 中填入测试账号：
+   ```json
+   { "email": "test@example.com", "password": "123456" }
+   ```
+3. 点击 **发送**，响应中获取 `token`
+
+#### 步骤 4：自动携带 Token（推荐配置）
+
+1. 在登录接口的 **后置操作** 标签页，添加"提取变量"：
+   - 变量名：`token`
+   - 提取方式：JSONPath
+   - 表达式：`$.data.token`
+2. 在环境管理的 **全局参数** 中添加请求头：
+   - 参数名：`Authorization`
+   - 值：`Bearer {{token}}`
+3. 配置完成后，调用登录接口会自动保存 Token，所有接口自动带上鉴权
+
+#### 步骤 5：调试接口
+
+1. 选择需要测试的接口（如 GET /api/post/list）
+2. 点击 **发送**，自动带上 Token
+3. 查看响应结果
+
+### Apifox vs Swagger 对比
+
+| 维度 | Apifox | Swagger |
+|------|--------|---------|
+| **代码侵入性** | 零侵入，外部平台管理 | 需在代码中添加 JSDoc 注解 |
+| **功能完整度** | 文档 + 调试 + Mock + 测试 + 代码生成 | 仅文档展示 |
+| **团队协作** | 多人实时协同，支持角色权限 | 无协作功能 |
+| **自动同步** | 支持定时导入 Swagger/OpenAPI | 代码变更需重启服务 |
+| **免费额度** | 个人免费，不限接口数/项目数 | 完全免费 |
+| **学习成本** | 低，可视化操作 | 中等，需学习注解语法 |
+| **适用场景** | 个人开发、团队协作、前后端对接 | 快速生成文档，无需额外工具 |
+
+### 使用注意事项
+
+1. **Token 自动更新**：登录接口配置"提取变量"后，每次调用登录接口会自动更新环境变量中的 token，无需手动复制
+2. **环境变量作用域**：提取变量更新的是"本地值"，这是正确的（每个人的 Token 不同），远程值用于团队共用配置
+3. **全局参数与接口级别冲突**：全局参数会自动应用到所有接口，如果某个接口不需要鉴权（如登录接口），全局参数会带上 token，但后端不会验证，不影响使用
+4. **接口文档更新**：当代码中新增/修改接口时，需要重新导入 Swagger JSON 或手动更新 Apifox 中的接口定义
+5. **Mock 服务**：Apifox 提供云端 Mock 和本地 Mock，前端可在后端未完成时提前开发
+6. **代码生成**：支持生成前端请求代码（axios/fetch）和后端接口代码，可直接复制使用
+
+### Swagger JSON 文件
+
+项目已生成 Swagger 2.0 格式的接口文档：
+
+- **文件位置**：`docs/api-swagger.json`
+- **用途**：可导入 Apifox、Postman 等工具，或用于自动化测试
+
+导入到 Apifox 的步骤：
+1. 打开 Apifox → 新建项目
+2. 点击 **导入** → 选择 **Swagger 2.0**
+3. 选择 `docs/api-swagger.json` 文件
+4. 点击 **确定**，12 个接口自动录入
 
 ---
 
@@ -315,13 +443,24 @@ token 通过 `/api/user/login` 接口获取。
 
 | 方法 | 路径 | 鉴权 | 说明 |
 |------|------|:---:|------|
-| POST | `/api/user/login` | ❌ | 登录，返回 token + 用户信息 |
 | GET | `/api/user/list` | ❌ | 查询全部用户（含文章） |
 | GET | `/api/user/profile` | ✅ | 查询当前登录用户信息 |
 | GET | `/api/user/:id` | ❌ | 查询单个用户详情 |
 | POST | `/api/user/create` | ❌ | 新增用户（注册） |
 | PUT | `/api/user/:id` | ❌ | 更新用户 |
 | DELETE | `/api/user/:id` | ❌ | 删除用户（存在文章时拦截） |
+
+### Auth 认证接口
+
+| 方法 | 路径 | 鉴权 | 说明 |
+|------|------|:---:|------|
+| POST | `/api/auth/login` | ❌ | 邮箱 + 密码登录，返回 token + 用户信息 |
+| POST | `/api/auth/register` | ❌ | 邮箱 + 密码注册（密码 bcrypt 加密入库） |
+| POST | `/api/auth/admin/reset-password` | ✅ + ADMIN | 管理员重置任意用户密码 |
+| GET | `/api/auth/oauth/github` | ❌ | 跳转 GitHub 授权页 |
+| GET | `/api/auth/oauth/github/callback` | ❌ | GitHub OAuth 回调（自动登录/注册） |
+| GET | `/api/auth/oauth/wechat` | ❌ | 跳转微信授权页 |
+| GET | `/api/auth/oauth/wechat/callback` | ❌ | 微信 OAuth 回调（自动登录/注册） |
 
 ### 文章接口
 
@@ -338,11 +477,22 @@ token 通过 `/api/user/login` 接口获取。
 **登录：**
 
 ```bash
-POST http://localhost:3000/api/user/login
+POST http://localhost:3000/api/auth/login
 Content-Type: application/json
 
-{ "email": "test@123.com", "password": "123456" }
+{ "email": "admin@test.com", "password": "admin123" }
 # 返回: { code: 200, msg: "登录成功", data: { user: {...}, token: "eyJ..." } }
+```
+
+**管理员重置用户密码：**
+
+```bash
+POST http://localhost:3000/api/auth/admin/reset-password
+Content-Type: application/json
+Authorization: Bearer <管理员token>
+
+{ "email": "user@test.com", "newPassword": "newpassword123" }
+# 返回: { code: 200, msg: "密码重置成功", data: { email: "...", name: "..." } }
 ```
 
 **新增文章（带 token）：**
@@ -377,6 +527,9 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 | 接口 | 校验内容 |
 |------|---------|
+| `POST /api/auth/login` | email（邮箱格式）、password（不能为空） |
+| `POST /api/auth/register` | name（1-50字符）、email（标准 ASCII 邮箱格式）、password（6-50字符） |
+| `POST /api/auth/admin/reset-password` | email（邮箱格式）、newPassword（6-50字符） |
 | `POST /api/user/create` | name(1-50字符)、email(邮箱格式)、password(6-50字符) |
 | `PUT /api/user/:id` | name/email/password 选填，传了按同样规则校验 |
 | `POST /api/post/create` | title(1-200字符)、content 必填 |
@@ -384,14 +537,16 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 校验失败统一返回 `400` + 中文提示，不进入数据库。
 
+> 邮箱正则仅支持标准 ASCII 字符（符合 RFC 5322），不支持中文邮箱。
+
 ### 错误码速查
 
 | code | 场景 |
 |:---:|------|
 | 200 | 操作成功 |
-| 400 | 参数校验失败 / 业务拦截 |
+| 400 | 参数校验失败 / 业务拦截（如密码错误、账号不存在） |
 | 401 | 未登录 / token 无效或过期 |
-| 403 | 无权操作他人数据 |
+| 403 | 无权限（非管理员 / 非文章作者） |
 | 404 | 资源不存在 / 接口不存在 |
 | 409 | 邮箱已注册（唯一约束冲突） |
 | 500 | 服务器内部错误（已脱敏） |
@@ -506,6 +661,20 @@ npm install
 ---
 
 ## 十五、版本更新日志
+
+**v3.1.0（2026-07-20）**
+
+- 密码安全升级：bcryptjs 加盐哈希存储（盐轮数 10），不可逆加密
+- 邮箱规范化：仅支持标准 ASCII 邮箱（RFC 5322），去除中文支持
+- 新增 Auth 认证模块（`POST /api/auth/login`、`POST /api/auth/register`）
+- 新增管理员重置密码接口（`POST /api/auth/admin/reset-password`，需 ADMIN 角色）
+- 新增角色权限中间件 `requireAdmin`，区分 USER / ADMIN 权限
+- 集成 GitHub OAuth 第三方登录，支持代理访问
+- 集成微信 OAuth 登录（需微信测试号）
+- 新增 Vue 3 + Element Plus 前端页面（`front-end-test/`），含 7 个页面
+- 新增 Swagger 2.0 API 文档（`docs/api-swagger.json`），可导入 Apifox
+- 种子数据新增管理员账号 `admin@test.com / admin123`
+- 更新环境变量模板，新增 OAuth 配置项
 
 **v3.0.0（2026-07-10）**
 
