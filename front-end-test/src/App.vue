@@ -1,11 +1,10 @@
 <template>
-  <!-- 未登录：登录页 -->
+  <!-- 未登录：登录页 / 注册页 -->
   <div v-if="!isAuthenticated">
     <router-view />
   </div>
 
-  <!-- 已登录：后台布局 -->
-  <!-- 上下结构：顶部 header 通栏，下面左侧边栏 + 右侧内容 -->
+  <!-- 已登录：后台布局（上下结构：顶部 header 通栏，下面左侧边栏 + 右侧内容） -->
   <el-container v-else class="layout">
     <!-- 顶部：全宽 header -->
     <el-header class="header">
